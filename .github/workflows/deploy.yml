@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up SSH
       run: |
@@ -21,13 +21,31 @@ jobs:
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.HOST_NAME }} >> ~/.ssh/known_hosts
 
+    - name: Check if index.html exists
+      run: |
+        if [ ! -f "index.html" ]; then
+          echo "Error: index.html not found in repository root"
+          exit 1
+        fi
+        echo "index.html found, proceeding with deployment"
+
     - name: Deploy index.html
       run: |
-        ssh ${{ secrets.USER_NAME }}@${{ secrets.HOST_NAME }} sudo mkdir -p /var/www/html
-        scp index.html ${{ secrets.USER_NAME}}@${{ secrets.HOST_NAME }}:/home/runner/
-        ssh ${{ secrets.USER_NAME }}@${{ secrets.HOST_NAME }} sudo mv ~/index.html /var/www/html/index.html
+        # Create directory if it doesn't exist
+        ssh ${{ secrets.USER_NAME }}@${{ secrets.HOST_NAME }} "sudo mkdir -p /var/www/html"
+        
+        # Copy file to server
+        scp index.html ${{ secrets.USER_NAME }}@${{ secrets.HOST_NAME }}:/tmp/index.html
+        
+        # Move file to web directory with proper permissions
+        ssh ${{ secrets.USER_NAME }}@${{ secrets.HOST_NAME }} "sudo mv /tmp/index.html /var/www/html/index.html && sudo chown www-data:www-data /var/www/html/index.html && sudo chmod 644 /var/www/html/index.html"
 
     - name: Reload Nginx
       run: |
         ssh ${{ secrets.USER_NAME }}@${{ secrets.HOST_NAME }} "sudo systemctl reload nginx"
+        
+    - name: Verify deployment
+      run: |
+        echo "Deployment completed successfully"
+        echo "Website should be available at: http://${{ secrets.HOST_NAME }}"
 
