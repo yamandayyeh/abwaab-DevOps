@@ -23,6 +23,7 @@ jobs:
 
     - name: Deploy index.html
       run: |
+       ssh ${{ secrets.USER_NAME }}@${{ secrets.HOST_NAME }} sudo mkdir -p /var/www/html
         scp "home page" ${{ secrets.USER_NAME}}@${{ secrets.HOST_NAME }}:${{ secrets.HTML_PATH }}/index.html
 
     - name: Reload Nginx
